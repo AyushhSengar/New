@@ -1,23 +1,30 @@
 package com.crowdfund.service;
 
+import java.time.Instant;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import com.crowdfund.dto.RegisterRequest;
 import com.crowdfund.dto.RoleRequest;
+import com.crowdfund.dto.UserSummaryResponse;
 import com.crowdfund.exception.AppException;
 import com.crowdfund.security.AuthUser;
 import com.crowdfund.util.FirestoreSupport;
 import com.crowdfund.util.Text;
+import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
 
 @Service
 public class UserService {
@@ -28,6 +35,28 @@ public class UserService {
 
     public UserService(Firestore db) {
         this.db = db;
+    }
+
+    /**
+     * ADMIN only: Lists all registered users sorted alphabetically by name/email.
+     */
+    public List<UserSummaryResponse> listUsers(AuthUser caller) {
+        caller.requireRole("ADMIN");
+
+        List<QueryDocumentSnapshot> docs = FirestoreSupport.await(db.collection("users").get()).getDocuments();
+
+        return docs.stream().map(doc -> {
+            String uid = doc.getId();
+            String name = doc.getString("name");
+            String email = doc.getString("email");
+            String role = doc.getString("ROLE");
+            Timestamp created = doc.getTimestamp("createdAt");
+            Instant createdAt = created != null ? created.toDate().toInstant() : null;
+            return new UserSummaryResponse(uid, name, email, role, createdAt);
+        }).sorted(Comparator.comparing(u -> {
+            String val = u.name() != null && !u.name().isBlank() ? u.name() : (u.email() != null ? u.email() : "");
+            return val.toLowerCase();
+        })).collect(Collectors.toList());
     }
 
     /**

@@ -1,7 +1,11 @@
 package com.crowdfund.service;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,14 +14,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
+import com.crowdfund.dto.CampaignFilterCriteria;
 import com.crowdfund.dto.CreateCampaignRequest;
 import com.crowdfund.dto.ReasonRequest;
 import com.crowdfund.exception.AppException;
+import com.crowdfund.model.Campaign;
 import com.crowdfund.security.AuthUser;
 import com.google.cloud.firestore.Firestore;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class CampaignServiceTest {
@@ -86,5 +89,35 @@ class CampaignServiceTest {
         AppException exNull = assertThrows(AppException.class,
                 () -> campaignService.reject(admin, "camp123", new ReasonRequest(null)));
         assertEquals(HttpStatus.BAD_REQUEST, exNull.getStatus());
+    }
+
+    @Test
+    @DisplayName("filterAndSortCampaigns filters by search, status and sorts with Admin pending priority")
+    void testFilterAndSortCampaigns() {
+        Instant now = Instant.now();
+        Campaign c1 = new Campaign("1", "Clean Oceans", "Marine cleanup", new BigDecimal("1000"), BigDecimal.ZERO, "u1", "OceanOrg", "APPROVED", "", now.minusSeconds(100), now);
+        Campaign c2 = new Campaign("2", "Tree Planting", "Reforestation", new BigDecimal("2000"), BigDecimal.ZERO, "u2", "GreenEarth", "PENDING", "", now.minusSeconds(50), now);
+        Campaign c3 = new Campaign("3", "Solar Energy", "Solar panels", new BigDecimal("3000"), new BigDecimal("3000"), "u3", "SunPower", "COMPLETED", "", now, now);
+
+        List<Campaign> list = List.of(c1, c2, c3);
+
+        // ADMIN view: pending campaigns come first
+        CampaignFilterCriteria emptyCriteria = CampaignFilterCriteria.empty();
+        List<Campaign> adminSorted = campaignService.filterAndSortCampaigns(list, emptyCriteria, "ADMIN");
+        assertEquals("2", adminSorted.get(0).getId()); // PENDING first
+        assertEquals("1", adminSorted.get(1).getId()); // APPROVED next
+        assertEquals("3", adminSorted.get(2).getId()); // COMPLETED last
+
+        // Search filtering: "planting"
+        CampaignFilterCriteria searchCriteria = new CampaignFilterCriteria("planting", "", "", "createdAt", "desc");
+        List<Campaign> searched = campaignService.filterAndSortCampaigns(list, searchCriteria, "CONTRIBUTOR");
+        assertEquals(1, searched.size());
+        assertEquals("2", searched.get(0).getId());
+
+        // Status filtering: "APPROVED"
+        CampaignFilterCriteria statusCriteria = new CampaignFilterCriteria("", "APPROVED", "", "createdAt", "desc");
+        List<Campaign> statusFiltered = campaignService.filterAndSortCampaigns(list, statusCriteria, "CONTRIBUTOR");
+        assertEquals(1, statusFiltered.size());
+        assertEquals("1", statusFiltered.get(0).getId());
     }
 }

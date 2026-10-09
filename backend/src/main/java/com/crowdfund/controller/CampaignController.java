@@ -1,17 +1,22 @@
 package com.crowdfund.controller;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.crowdfund.dto.AmountRequest;
+import com.crowdfund.dto.CampaignFilterCriteria;
+import com.crowdfund.dto.CampaignResponse;
 import com.crowdfund.dto.CreateCampaignRequest;
 import com.crowdfund.dto.ReasonRequest;
 import com.crowdfund.security.AuthUser;
@@ -32,6 +37,33 @@ public class CampaignController {
 
         this.campaignService = campaignService;
         this.contributionService = contributionService;
+    }
+
+    /**
+     * Lists campaigns with server-side role scoping, search query filtering and sorting.
+     */
+    @GetMapping
+    public List<CampaignResponse> list(
+            @RequestAttribute(FirebaseAuthFilter.ATTRIBUTE) AuthUser user,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String creatorId,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDirection) {
+
+        CampaignFilterCriteria criteria = new CampaignFilterCriteria(search, status, creatorId, sortBy, sortDirection);
+        return campaignService.listCampaigns(user, criteria);
+    }
+
+    /**
+     * Retrieves a single campaign with calculated progress and role access checks.
+     */
+    @GetMapping("/{id}")
+    public CampaignResponse getById(
+            @RequestAttribute(FirebaseAuthFilter.ATTRIBUTE) AuthUser user,
+            @PathVariable String id) {
+
+        return campaignService.getCampaignById(user, id);
     }
 
     @PostMapping

@@ -1,6 +1,7 @@
 package com.crowdfund.controller;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.crowdfund.dto.RegisterRequest;
 import com.crowdfund.dto.RoleRequest;
+import com.crowdfund.dto.UserSummaryResponse;
 import com.crowdfund.security.AuthUser;
 import com.crowdfund.security.FirebaseAuthFilter;
 import com.crowdfund.service.UserService;
@@ -54,6 +56,13 @@ public class AccountController {
             @RequestBody RegisterRequest request) {
 
         return userService.register(user, request);
+    }
+
+    @GetMapping("/users")
+    public List<UserSummaryResponse> listUsers(
+            @RequestAttribute(FirebaseAuthFilter.ATTRIBUTE) AuthUser user) {
+
+        return userService.listUsers(user);
     }
 
     @PatchMapping("/users/{uid}/role")
