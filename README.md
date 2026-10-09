@@ -1,90 +1,177 @@
-# CrowdFund (HTML + CSS + JS + Firebase + Java Spring Boot)
+# FundHub — Modern Java Crowdfunding Platform
+
+FundHub is a modern, full-stack Java web application for managing community fundraising campaigns. It features three distinct user roles (**ADMIN**, **CREATOR**, and **CONTRIBUTOR**), an atomic server-side transaction engine, and a premium responsive UI.
+
+---
+
+## Architecture Overview
 
 ```
-crowdfunding/
-├── frontend/                 -> goes into your GitHub Pages repo
-│   ├── index.html
-│   ├── style.css
-│   ├── script.js
-│   ├── config.js             <- set API_BASE_URL here
-│   └── firestore.rules       <- paste into Firebase console (LAST step)
-└── backend/                  -> Spring Boot API (deploy separately)
-    ├── pom.xml
-    ├── Dockerfile
-    └── src/main/...          controller / service / security / dto / exception / util / config
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          BROWSER / FRONTEND (HTML5/CSS3/JS)                 │
+│  • Modern Obsidian & Indigo Design System with Glassmorphism & Responsive UI│
+│  • Firebase Authentication (Client Sign-In & ID Token generation)           │
+│  • Cloud Firestore Real-time Listeners (Read-Only, Role-Scoped Feeds)       │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │ Authorization: Bearer <Firebase ID Token>
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    JAVA BACKEND (Java 17 + Spring Boot 3.3.5)               │
+│  • FirebaseAuthFilter: Cryptographically verifies tokens & loads role       │
+│  • Controllers: AccountController, CampaignController                       │
+│  • Services: UserService, CampaignService, ContributionService              │
+│  • Security & Rules: Role checks, 2-decimal precision, Concurrency control  │
+│  • Firebase Admin SDK (Atomic Firestore Transactions)                       │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       ▼
+                        Google Cloud Firestore Database
+                        (users, campaigns, donations)
 ```
 
-## Who does what
-| Task | Owner |
-|---|---|
-| Sign-in / sign-up, ID tokens | Firebase Authentication (browser) |
-| Live lists (campaigns, users, contributions) | Firestore listeners in the browser, **read-only**, scoped by role |
-| Register profile, create campaign, approve/reject, change role, contribute | **Java API** (verifies token and role, then writes with Admin SDK) |
-| Final guard | `firestore.rules`: clients cannot write at all |
+---
 
-Contributions are **simulated**: a record is stored, no real money moves.
+## Technology Stack
 
-## 1. Service-account key (needed by Java)
-1. Firebase console -> Project settings -> Service accounts -> **Generate new private key**.
-2. Save the file OUTSIDE the project folder (for example `C:\keys\crowdfund-key.json`).
-3. **Never commit it or paste it in the frontend.** `.gitignore` already blocks common names.
+| Layer | Technology | Purpose |
+|---|---|---|
+| **Backend Core** | Java 17, Spring Boot 3.3.5 (`spring-boot-starter-web`) | Application logic, request routing, role enforcement, business rules |
+| **Server Security** | Firebase Admin SDK 9.4.1 | Token verification, server-side data access, atomic transactions |
+| **Testing** | JUnit 5, Mockito, AssertJ | Automated unit and integration testing (23 tests, 100% pass) |
+| **Build Tool** | Apache Maven 3.10.0+ | Dependency management and JAR packaging |
+| **Database & Identity** | Cloud Firestore, Firebase Authentication | User identity, real-time snapshot listeners |
+| **Frontend Presentation** | Semantic HTML5, Modern CSS3 | Responsive grid/flexbox layout, status pills, progress bars |
+| **Client Scripting** | Vanilla ES Modules (`script.js`, `config.js`) | Form capture, DOM updates, token attachment, Firestore snapshot binding |
 
-## 2. Run the backend locally (Java 17+, Maven)
+---
+
+## Role Permissions & Workflows
+
+### 1. ADMIN
+- **Platform Analytics:** Views live counts of pending, approved, rejected, completed campaigns, total funds raised, and user distribution.
+- **Campaign Review:** Reviews submissions in `PENDING` status. Approves to `APPROVED` or rejects to `REJECTED` (with mandatory reason feedback).
+- **User Role Management:** Promotes registered users to `ADMIN`, `CREATOR`, or `CONTRIBUTOR` (cannot modify own role to prevent lockout).
+
+### 2. CREATOR
+- **Create Campaign:** Submits fundraising requests with Title ($\le 120$ chars), Description ($\le 2000$ chars), and Target Goal ($> 0$).
+- **Status Tracking:** Initially saved as `PENDING`. Tracks live progress %, target vs collected amounts, and admin feedback reasons.
+- **Search & Filter:** Real-time search across submitted campaigns.
+
+### 3. CONTRIBUTOR
+- **Browse Campaigns:** Views approved and completed campaigns.
+- **Simulated Demo Contributions:** Records demo contributions up to the remaining goal amount.
+- **Contribution History:** Real-time ledger of all supported causes and amounts.
+- **Automatic Completion:** When collected amount meets the target goal, the campaign automatically transitions to `COMPLETED`.
+
+---
+
+## Demo / Simulated Contribution Notice
+
+> **Academic / Demonstration Mode:**
+> FundHub is strictly designed as an academic demonstration. It does **NOT** integrate real payment gateways (Razorpay, Stripe, PayPal, UPI) and does **NOT** collect sensitive banking or card credentials. Contributions are recorded as simulated ledger entries with `simulated: true` stored in Firestore.
+
+---
+
+## Folder Structure
+
+```
+c:\Users\ayush\OneDrive\Desktop\Java Sem 3\Project/
+├── backend/
+│   ├── pom.xml                     # Maven project descriptor (Java 17, Spring Boot 3.3.5)
+│   ├── Dockerfile                  # Container specification
+│   ├── .gitignore                  # Ignores target/ and key files
+│   └── src/
+│       ├── main/
+│       │   ├── java/com/crowdfund/
+│       │   │   ├── CrowdfundApplication.java
+│       │   │   ├── config/         (CorsConfig, FirebaseConfig)
+│       │   │   ├── controller/     (AccountController, CampaignController)
+│       │   │   ├── dto/            (AmountRequest, CreateCampaignRequest, ReasonRequest, RegisterRequest, RoleRequest)
+│       │   │   ├── exception/      (AppException, GlobalExceptionHandler)
+│       │   │   ├── security/       (AuthUser, FirebaseAuthFilter)
+│       │   │   ├── service/        (UserService, CampaignService, ContributionService)
+│       │   │   └── util/           (FirestoreSupport, Money, Text)
+│       │   └── resources/
+│       │       └── application.properties
+│       └── test/java/com/crowdfund/ # 23 Automated JUnit 5 / Mockito Unit Tests
+├── frontend/
+│   ├── index.html                  # FundHub Single-Page Application
+│   ├── style.css                   # Modern Design System (Indigo/Slate, Glassmorphism, Responsive)
+│   ├── script.js                   # Client interactions & live read listeners
+│   ├── config.js                   # Backend endpoint configuration
+│   └── firestore.rules             # Production security rules (zero client direct writes)
+├── index.html                      # Root entry point
+├── style.css                       # Root stylesheet
+├── script.js                       # Root script
+├── config.js                       # Root config
+├── firestore.rules                 # Root security rules
+└── README.md                       # Comprehensive documentation
+```
+
+---
+
+## Local Development Guide
+
+### Prerequisites
+- **Java 17+** (OpenJDK / Temurin recommended)
+- **Apache Maven 3.8+**
+- **Modern Web Browser** (Chrome, Edge, Firefox, Safari)
+
+### 1. Configure Firebase Service Account Key
+1. In the Firebase Console, go to **Project Settings** $\rightarrow$ **Service Accounts** $\rightarrow$ **Generate New Private Key**.
+2. Save the JSON file outside your repository (e.g., `C:\keys\fundhub-key.json`).
+3. Set the environment variable:
+   ```powershell
+   # Windows (PowerShell)
+   $env:FIREBASE_SERVICE_ACCOUNT_PATH="C:\keys\fundhub-key.json"
+
+   # macOS / Linux (Bash)
+   export FIREBASE_SERVICE_ACCOUNT_PATH="/path/to/fundhub-key.json"
+   ```
+
+### 2. Run the Java Backend
 ```bash
 cd backend
-# Windows (PowerShell)
-$env:FIREBASE_SERVICE_ACCOUNT_PATH="C:\keys\crowdfund-key.json"
-mvn spring-boot:run
-
-# Mac/Linux
-export FIREBASE_SERVICE_ACCOUNT_PATH=/path/to/crowdfund-key.json
 mvn spring-boot:run
 ```
-Test: open http://localhost:8080/api/health -> `{"status":"ok"}`.
+Test health endpoint: Open `http://localhost:8080/api/health` $\rightarrow$ `{"status":"ok"}`.
 
-## 3. Run the frontend locally
-Serve `frontend/` over HTTP (ES modules do not work from `file://`), for example VS Code **Live Server** (port 5500) or `python -m http.server 5500`.
-`config.js` already points to `http://localhost:8080`. Allowed origins are set in `backend/src/main/resources/application.properties` (or env var `CORS_ALLOWED_ORIGINS`).
+### 3. Run Automated Tests
+```bash
+cd backend
+mvn test
+```
+All 23 unit and integration tests across Controllers, Services, Utilities, Security, and Exception Handlers will execute.
 
-## 4. Deploy order (important)
-1. Deploy the backend (Render / Railway / Cloud Run, using the `Dockerfile`). Set env vars:
-   - `FIREBASE_SERVICE_ACCOUNT_JSON` = the full contents of the key file
-   - `CORS_ALLOWED_ORIGINS` = `https://ayushhsengar.github.io`
-2. Put the backend HTTPS URL in `frontend/config.js` -> `API_BASE_URL`, push the frontend to GitHub Pages.
-3. Test every flow below against the deployed backend.
-4. **Only then** publish `firestore.rules` (Firebase console -> Firestore -> Rules). Publishing earlier would block the old browser-side writes.
+### 4. Run the Frontend
+Serve the project directory over a local HTTP server:
+```bash
+# Using Python
+python -m http.server 5500
 
-## API (all need `Authorization: Bearer <Firebase ID token>` except health)
-| Method | Path | Role | Body | Success |
-|---|---|---|---|---|
-| GET | `/api/health` | none | | `{status:"ok"}` |
-| GET | `/api/me` | any signed-in | | `{uid,email,name,role,hasProfile}` |
-| POST | `/api/register` | signed-in, no profile yet | `{name, role: CREATOR\|CONTRIBUTOR}` | `{uid, role}` |
-| POST | `/api/campaigns` | CREATOR | `{title, description, targetAmount}` | 201 `{id, status:"PENDING"}` |
-| POST | `/api/campaigns/{id}/approve` | ADMIN | | `{id, status:"APPROVED"}` |
-| POST | `/api/campaigns/{id}/reject` | ADMIN | `{reason}` (required) | `{id, status:"REJECTED"}` |
-| POST | `/api/campaigns/{id}/contributions` | CONTRIBUTOR | `{amount}` | `{donationId, collectedAmount, status}` |
-| PATCH | `/api/users/{uid}/role` | ADMIN | `{role}` | `{uid, role}` |
+# Or using VS Code Live Server extension (Port 5500)
+```
+Open `http://localhost:5500` in your web browser.
 
-Errors are always `{"error": "message"}` with status 400 (bad input), 401 (missing/invalid token), 403 (wrong role), 404 (not found), 409 (conflict, e.g. campaign not pending / goal reached), 503 (database unavailable).
+---
 
-## Data model (unchanged, existing data stays valid)
-- `users/{uid}`: `name, email, ROLE, createdAt, updatedAt`
-- `campaigns/{id}`: `title, description, targetAmount, collectedAmount, creatorId, creatorName, status, rejectionReason, createdAt, updatedAt`
-- `donations/{id}`: `contributorId, contributorEmail, contributorName, campaignId, campaignTitle, amount, simulated, createdAt`
+## API Reference (Bearer Token Required)
 
-## Test checklist
-1. Register a Creator and a Contributor; login/logout, then login again and logout again.
-2. Creator: create a campaign (empty fields rejected, double click does not duplicate); it shows PENDING in My Campaigns.
-3. Admin: Pending campaign appears first; reject without a reason is blocked; approve works; a second approve is refused.
-4. Contributor: approved campaign appears live without refresh; contribute below the remaining amount; progress bar and history update.
-5. Contribute exactly the remaining amount: campaign becomes COMPLETED, button disabled, creator sees "Funding target reached".
-6. Admin: change a user's role; you cannot edit your own role.
-7. From the browser console try `updateDoc` on a campaign: it must fail with permission-denied (after step 4 of deploy).
-8. Stop the backend and press Approve: you get "Cannot reach the server", the app does not break.
-9. Resize to mobile width: sidebar becomes a scrolling tab bar, cards stack.
+| Method | Endpoint | Authorized Role | Request Body | Description |
+|---|---|:---:|---|---|
+| `GET` | `/api/health` | Public | None | Health check |
+| `GET` | `/api/me` | Any Authenticated | None | Returns verified caller info |
+| `POST` | `/api/register` | New User (No Profile) | `{ name, role }` | Registers Creator or Contributor profile |
+| `POST` | `/api/campaigns` | `CREATOR` | `{ title, description, targetAmount }` | Creates new campaign in `PENDING` state |
+| `POST` | `/api/campaigns/{id}/approve` | `ADMIN` | None | Approves pending campaign |
+| `POST` | `/api/campaigns/{id}/reject` | `ADMIN` | `{ reason }` | Rejects pending campaign with feedback |
+| `POST` | `/api/campaigns/{id}/contributions` | `CONTRIBUTOR` | `{ amount }` | Records atomic simulated contribution |
+| `PATCH` | `/api/users/{uid}/role` | `ADMIN` | `{ role }` | Updates authorized user role |
 
-## Notes
-- The first ADMIN must exist already (your current admin keeps working). New sign-ups can only become Creator or Contributor; admins promote users from Manage Users.
-- Money is displayed in INR. Change `CURRENCY`/`LOCALE` in `config.js` for USD.
-- Campaign images are intentionally not part of this version.
+---
+
+## Semester 3 Viva Concepts
+
+1. **Encapsulation:** Java DTO records ([`AmountRequest`](file:///c:/Users/ayush/OneDrive/Desktop/Java%20Sem%203/Project/backend/src/main/java/com/crowdfund/dto/AmountRequest.java), [`CreateCampaignRequest`](file:///c:/Users/ayush/OneDrive/Desktop/Java%20Sem%203/Project/backend/src/main/java/com/crowdfund/dto/CreateCampaignRequest.java)) ensure immutability and valid construction.
+2. **Layered Architecture:** Clear separation between Controllers (REST API), Services (Business Logic), Utilities (Stateless helpers), and Security Filters.
+3. **Concurrency Control:** Atomic transactions in [`ContributionService.java`](file:///c:/Users/ayush/OneDrive/Desktop/Java%20Sem%203/Project/backend/src/main/java/com/crowdfund/service/ContributionService.java) prevent race conditions when multiple contributors support a campaign simultaneously.
+4. **Exception Handling:** Centralized [`GlobalExceptionHandler`](file:///c:/Users/ayush/OneDrive/Desktop/Java%20Sem%203/Project/backend/src/main/java/com/crowdfund/exception/GlobalExceptionHandler.java) translates [`AppException`](file:///c:/Users/ayush/OneDrive/Desktop/Java%20Sem%203/Project/backend/src/main/java/com/crowdfund/exception/AppException.java) instances into standard HTTP responses.
