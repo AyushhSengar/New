@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrowdFund</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- GLOBAL LOADING OVERLAY -->
+    <div id="loadingOverlay" class="loading-overlay hidden" role="status" aria-live="polite">
+        <div class="loading-box">
+            <div class="spinner"></div>
+            <div id="loadingText" class="loading-text">Loading...</div>
+        </div>
+    </div>
+
+    <!-- TOASTS -->
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+
+    <!-- =====================================================
+         LOGIN / REGISTER
+    ====================================================== -->
+    <div id="loginPage" class="login-page">
+
+        <div class="login-card">
+
+            <div class="login-logo">CrowdFund</div>
+
+            <!-- LOGIN -->
+            <div id="loginPanel">
+
+                <h1>Welcome back</h1>
+                <p class="login-subtitle">Sign in to continue to CrowdFund</p>
+
+                <form id="loginForm" novalidate>
+
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" placeholder="Enter your email" autocomplete="email" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" placeholder="Enter your password" autocomplete="current-password" required>
+                    </div>
+
+                    <button type="submit" id="loginButton" class="primary-button login-button">Sign in</button>
+                </form>
+
+                <p id="loginError" class="error-message" role="alert"></p>
+
+                <p class="switch-text">
+                    New here?
+                    <button type="button" id="showRegister" class="link-button">Create an account</button>
+                </p>
+            </div>
+
+            <!-- REGISTER -->
+            <div id="registerPanel" class="hidden">
+
+                <h1>Create your account</h1>
+                <p class="login-subtitle">Start a campaign or support one</p>
+
+                <form id="registerForm" novalidate>
+
+                    <div class="form-group">
+                        <label for="registerName">Full name</label>
+                        <input type="text" id="registerName" placeholder="Your name" autocomplete="name" maxlength="80" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="registerEmail">Email</label>
+                        <input type="email" id="registerEmail" placeholder="Enter your email" autocomplete="email" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="registerPassword">Password (min. 6 characters)</label>
+                        <input type="password" id="registerPassword" placeholder="Choose a password" autocomplete="new-password" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="registerRole">I want to</label>
+                        <select id="registerRole">
+                            <option value="CONTRIBUTOR">Support campaigns (Contributor)</option>
+                            <option value="CREATOR">Raise funds (Creator)</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" id="registerButton" class="primary-button login-button">Create account</button>
+                </form>
+
+                <p id="registerError" class="error-message" role="alert"></p>
+
+                <p class="switch-text">
+                    Already have an account?
+                    <button type="button" id="showLogin" class="link-button">Sign in</button>
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- =====================================================
+         MAIN APPLICATION
+    ====================================================== -->
+    <div id="appPage" class="app-page hidden">
+
+        <header class="top-header">
+
+            <div class="brand" id="brandTitle">CrowdFund</div>
+
+            <div class="header-actions">
+                <span id="loggedInUser" class="logged-user"></span>
+                <button type="button" id="logoutButton" class="logout-button">Logout</button>
+            </div>
+
+        </header>
+
+        <main class="app-container">
+
+
+            <!-- ================= CONTRIBUTOR ================= -->
+            <section id="contributorDashboard" class="role-dashboard hidden">
+
+                <nav class="sidebar" aria-label="Contributor navigation">
+                    <button type="button" class="sidebar-item active" data-section="contributor-overview">Overview</button>
+                    <button type="button" class="sidebar-item" data-section="contributor-support">Browse Campaigns</button>
+                    <button type="button" class="sidebar-item" data-section="contributor-history">My Contributions</button>
+                </nav>
+
+                <div class="dashboard-content">
+
+                    <div id="contributor-overview" class="dashboard-section">
+                        <div class="content-card">
+                            <h1>Overview</h1>
+                            <p class="section-description">Your activity at a glance.</p>
+                            <div id="contributorStats" class="stats-grid"></div>
+                            <p class="notice">Contributions are recorded as simulated entries. No real payment is processed.</p>
+                        </div>
+                    </div>
+
+                    <div id="contributor-support" class="dashboard-section hidden">
+                        <div class="content-card">
+                            <h1>Browse campaigns</h1>
+                            <p class="section-description">Only approved campaigns are shown. Contributions are simulated.</p>
+
+                            <input type="search" id="contributorCampaignSearch" class="campaign-search"
+                                placeholder="Search by title, description or creator" aria-label="Search campaigns">
+
+                            <div id="contributorCampaigns" class="campaign-grid">
+                                <div class="loading-message">Loading campaigns...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="contributor-history" class="dashboard-section hidden">
+                        <div class="content-card">
+                            <h1>My contributions</h1>
+                            <p class="section-description">Campaigns you have supported and the amounts you contributed.</p>
+                            <div id="contributionHistory" class="history-list">
+                                <div class="loading-message">Loading contribution history...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+
+            <!-- ================= CREATOR ================= -->
+            <section id="creatorDashboard" class="role-dashboard hidden">
+
+                <nav class="sidebar" aria-label="Creator navigation">
+                    <button type="button" class="sidebar-item active" data-section="creator-overview">Overview</button>
+                    <button type="button" class="sidebar-item" data-section="creator-create">Create Campaign</button>
+                    <button type="button" class="sidebar-item" data-section="creator-manage">My Campaigns</button>
+                </nav>
+
+                <div class="dashboard-content">
+
+                    <div id="creator-overview" class="dashboard-section">
+                        <div class="content-card">
+                            <h1>Overview</h1>
+                            <p class="section-description">How your campaigns are doing.</p>
+                            <div id="creatorStats" class="stats-grid"></div>
+                        </div>
+                    </div>
+
+                    <div id="creator-create" class="dashboard-section hidden">
+                        <div class="content-card create-card">
+                            <h1>Create campaign</h1>
+                            <p class="section-description">Submit a campaign for admin approval. It goes live once approved.</p>
+
+                            <form id="campaignForm" novalidate>
+
+                                <div class="form-group">
+                                    <label for="campaignTitle">Campaign name</label>
+                                    <input type="text" id="campaignTitle" placeholder="Enter campaign name" maxlength="120" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="campaignDescription">Description</label>
+                                    <textarea id="campaignDescription" placeholder="Describe your campaign" rows="5" maxlength="2000" required></textarea>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="campaignTarget">Target amount</label>
+                                    <input type="number" id="campaignTarget" placeholder="Enter target amount" min="1" step="0.01" required>
+                                </div>
+
+                                <button type="submit" id="createCampaignButton" class="primary-button">Submit for approval</button>
+                            </form>
+
+                            <div id="campaignMessage" class="form-message" role="status"></div>
+                        </div>
+                    </div>
+
+                    <div id="creator-manage" class="dashboard-section hidden">
+                        <div class="content-card">
+                            <h1>My campaigns</h1>
+
+                            <input type="search" id="creatorCampaignSearch" class="campaign-search"
+                                placeholder="Search your campaigns" aria-label="Search your campaigns">
+
+                            <div id="creatorCampaigns" class="campaign-grid">
+                                <div class="loading-message">Loading campaigns...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+
+            <!-- ================= ADMIN ================= -->
+            <section id="adminDashboard" class="role-dashboard hidden">
+
+                <nav class="sidebar" aria-label="Admin navigation">
+                    <button type="button" class="sidebar-item active" data-section="admin-overview">Overview</button>
+                    <button type="button" class="sidebar-item" data-section="admin-campaigns">Manage Campaigns</button>
+                    <button type="button" class="sidebar-item" data-section="admin-users">Manage Users</button>
+                    <button type="button" class="sidebar-item" data-section="admin-settings">System Settings</button>
+                </nav>
+
+                <div class="dashboard-content">
+
+                    <div id="admin-overview" class="dashboard-section">
+                        <div class="content-card">
+                            <h1>Overview</h1>
+                            <p class="section-description">Platform statistics based on live data.</p>
+                            <div id="adminStats" class="stats-grid"></div>
+                        </div>
+                    </div>
+
+                    <div id="admin-campaigns" class="dashboard-section hidden">
+                        <div class="content-card">
+                            <h1>Manage campaigns</h1>
+                            <p class="section-description">Review pending requests first, then monitor approved campaigns.</p>
+
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Campaign</th>
+                                            <th>Funding</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adminCampaigns">
+                                        <tr><td colspan="4" class="table-loading">Loading campaigns...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="admin-users" class="dashboard-section hidden">
+                        <div class="content-card">
+                            <h1>Manage users</h1>
+                            <p class="section-description">View registered users and update their roles.</p>
+
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Email</th>
+                                            <th>Role</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="usersTableBody">
+                                        <tr><td colspan="4" class="table-loading">Loading users...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="admin-settings" class="dashboard-section hidden">
+                        <div class="content-card">
+                            <h1>System settings</h1>
+
+                            <div class="settings-card">
+                                <div class="setting-row"><strong>Authentication</strong><p>Firebase Authentication</p></div>
+                                <div class="setting-row"><strong>Database</strong><p>Cloud Firestore (live updates)</p></div>
+                                <div class="setting-row"><strong>Server</strong><p>Java Spring Boot API (token and role verified on every write)</p></div>
+                                <div class="setting-row"><strong>Payments</strong><p>Simulated. Contributions are recorded, no money moves.</p></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+
+    <!-- =====================================================
+         EDIT ROLE MODAL
+    ====================================================== -->
+    <div id="roleModal" class="modal-overlay hidden">
+        <div class="role-modal" role="dialog" aria-modal="true" aria-labelledby="roleModalTitle">
+
+            <div class="modal-header">
+                <div>
+                    <h2 id="roleModalTitle">Edit user role</h2>
+                    <p id="editUserName">Update user access level</p>
+                </div>
+                <button type="button" id="closeRoleModal" class="modal-close" aria-label="Close">&times;</button>
+            </div>
+
+            <div class="form-group">
+                <label for="editUserRole">Role</label>
+                <select id="editUserRole">
+                    <option value="ADMIN">Admin</option>
+                    <option value="CREATOR">Creator</option>
+                    <option value="CONTRIBUTOR">Contributor</option>
+                </select>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" id="cancelRoleEdit" class="secondary-button">Cancel</button>
+                <button type="button" id="saveRoleButton" class="primary-button modal-save-button">Save changes</button>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- =====================================================
+         GENERIC DIALOG (confirm / amount / reason)
+    ====================================================== -->
+    <div id="dialogModal" class="modal-overlay hidden">
+        <div class="role-modal" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+
+            <div class="modal-header">
+                <div>
+                    <h2 id="dialogTitle">Confirm</h2>
+                    <p id="dialogMessage"></p>
+                </div>
+            </div>
+
+            <div id="dialogFieldWrap" class="form-group hidden">
+                <label id="dialogFieldLabel" for="dialogInput">Value</label>
+                <input type="text" id="dialogInput">
+                <textarea id="dialogTextarea" rows="4" class="hidden"></textarea>
+            </div>
+
+            <p id="dialogError" class="error-message dialog-error" role="alert"></p>
+
+            <div class="modal-actions">
+                <button type="button" id="dialogCancel" class="secondary-button">Cancel</button>
+                <button type="button" id="dialogConfirm" class="primary-button modal-save-button">Confirm</button>
+            </div>
+
+        </div>
+    </div>
+
+
+    <script type="module" src="script.js?v=3"></script>
+
+</body>
+
+</html>

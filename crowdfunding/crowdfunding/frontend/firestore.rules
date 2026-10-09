@@ -1,0 +1,70 @@
+rules_version = '2';
+
+// =========================================================
+// CrowdFund - Firestore Security Rules (FINAL)
+//
+// The browser can only READ data that belongs to the signed-in
+// user's role. ALL writes are rejected here and are performed by
+// the Spring Boot backend (Firebase Admin SDK bypasses these rules
+// after verifying the user's token and role).
+//
+// DEPLOY THESE RULES ONLY AFTER THE BACKEND IS RUNNING AND TESTED,
+// otherwise the old browser-side writes will stop working.
+// =========================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isLoggedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.ROLE == "ADMIN";
+    }
+
+    // ---------------------------------------------------
+    // USERS: own profile, or everyone if ADMIN. No client writes.
+    // ---------------------------------------------------
+    match /users/{userId} {
+      allow read: if isLoggedIn()
+        && (request.auth.uid == userId || isAdmin());
+      allow write: if false;
+    }
+
+    // ---------------------------------------------------
+    // CAMPAIGNS
+    //  - creator: own campaigns (query: creatorId == uid)
+    //  - contributor: APPROVED/COMPLETED only (query: status in [...])
+    //  - admin: everything
+    // ---------------------------------------------------
+    match /campaigns/{campaignId} {
+      allow read: if isLoggedIn()
+        && (
+          resource.data.creatorId == request.auth.uid
+          || resource.data.status in ["APPROVED", "COMPLETED"]
+          || isAdmin()
+        );
+      allow write: if false;
+    }
+
+    // ---------------------------------------------------
+    // DONATIONS: own history, or everything if ADMIN. No client writes.
+    // ---------------------------------------------------
+    match /donations/{donationId} {
+      allow read: if isLoggedIn()
+        && (
+          resource.data.contributorId == request.auth.uid
+          || isAdmin()
+        );
+      allow write: if false;
+    }
+
+    // Everything else is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
