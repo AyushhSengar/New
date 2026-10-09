@@ -1,8 +1,0 @@
-target/
-.idea/
-.vscode/
-*.iml
-.env
-# Firebase service-account keys must NEVER be committed
-serviceAccount*.json
-*-firebase-adminsdk-*.json

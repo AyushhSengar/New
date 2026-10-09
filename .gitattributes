@@ -1,0 +1,3 @@
+# GitHub Linguist Configuration for FundHub (Java-Majority Web Application)
+*.java linguist-detectable=true
+*.js linguist-detectable=true
